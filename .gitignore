@@ -1,0 +1,4 @@
+# Solo se publica la carpeta docs/ (la web). Todo lo demás se queda en tu PC.
+/*
+!/docs/
+!/.gitignore

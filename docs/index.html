@@ -1,0 +1,662 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>S&amp;T Capital Group</title>
+<meta name="description" content="Holding privado con presencia en España, Colombia y Venezuela. Operamos empresas reales e invertimos en mercados globales.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #1f2023; --bg2: #18191b; --card: #26272b; --ink: #f1f1f2; --mut: #8d9099;
+    --line: #34363b; --red: #d7141a; --ease: cubic-bezier(.16, 1, .3, 1);
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font-family: "Montserrat", system-ui, sans-serif; overflow-x: hidden; -webkit-font-smoothing: antialiased; }
+  a { color: inherit; text-decoration: none; }
+  ::selection { background: var(--red); color: #fff; }
+  .wrap { width: min(1280px, 100% - 32px); margin: 0 auto; }
+  .eyebrow { font-size: .7rem; font-weight: 600; letter-spacing: .32em; text-transform: uppercase; color: var(--mut); display: flex; align-items: center; gap: 12px; }
+  .eyebrow::before { content: ""; width: 28px; height: 2px; background: var(--red); }
+  .red { color: var(--red); }
+
+  /* grano */
+  .grain { position: fixed; inset: -50%; pointer-events: none; z-index: 90; opacity: .07;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+    animation: grain 1s steps(4) infinite; }
+  @keyframes grain { 0%{transform:translate(0,0)} 25%{transform:translate(-3%,2%)} 50%{transform:translate(2%,-3%)} 75%{transform:translate(-2%,-1%)} }
+
+  /* precarga */
+  #pre { position: fixed; inset: 0; z-index: 100; background: var(--bg2); display: grid; place-items: center; transition: opacity .8s var(--ease), visibility .8s; }
+  #pre.done { opacity: 0; visibility: hidden; }
+  #pre .box { display: flex; flex-direction: column; align-items: center; gap: 22px; }
+  #pre img { width: 170px; opacity: 0; animation: fadeIn .9s .3s forwards; }
+  #pre .bar { width: 170px; height: 2px; background: var(--line); overflow: hidden; }
+  #pre .bar i { display: block; height: 100%; background: var(--red); transform: scaleX(0); transform-origin: left; animation: load 1.3s .2s var(--ease) forwards; }
+  @keyframes load { to { transform: scaleX(1); } }
+  @keyframes fadeIn { to { opacity: 1; } }
+
+  /* cursor */
+  .cur, .cur-ring { position: fixed; top: 0; left: 0; pointer-events: none; z-index: 95; border-radius: 50%; transform: translate(-50%, -50%); display: none; }
+  .cur { width: 6px; height: 6px; background: var(--red); }
+  .cur-ring { width: 38px; height: 38px; border: 1px solid rgba(241,241,242,.35); transition: width .35s var(--ease), height .35s var(--ease), background .35s, border-color .35s; }
+  .cur-ring.big { width: 74px; height: 74px; background: rgba(215,20,26,.12); border-color: rgba(215,20,26,.6); }
+  @media (pointer: fine) { .cur, .cur-ring { display: block; } }
+
+  /* header */
+  header { position: fixed; inset: 0 0 auto; z-index: 50; transition: background .4s, backdrop-filter .4s, border-color .4s; border-bottom: 1px solid transparent; }
+  header.solid { background: rgba(24,25,27,.78); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); border-color: var(--line); }
+  header .wrap { display: flex; align-items: center; justify-content: space-between; height: 76px; gap: 16px; }
+  header img { height: 34px; display: block; }
+  nav { display: flex; align-items: center; gap: 34px; font-size: .72rem; font-weight: 600; letter-spacing: .22em; text-transform: uppercase; }
+  nav a:not(.btn) { color: var(--mut); transition: color .3s; }
+  nav a:not(.btn):hover { color: var(--ink); }
+  .btn { display: inline-flex; align-items: center; gap: 12px; padding: 15px 26px; border-radius: 999px; font-size: .72rem; font-weight: 700; letter-spacing: .2em; text-transform: uppercase; background: var(--red); color: #fff; border: 0; cursor: pointer; font-family: inherit; transition: transform .4s var(--ease), box-shadow .4s; will-change: transform; }
+  .btn:hover { box-shadow: 0 12px 40px rgba(215,20,26,.35); }
+  .btn.ghost { background: transparent; border: 1px solid var(--line); color: var(--ink); }
+  .btn.ghost:hover { border-color: var(--ink); box-shadow: none; }
+  .btn .play { width: 22px; height: 22px; border-radius: 50%; background: var(--red); display: grid; place-items: center; font-size: .5rem; color: #fff; }
+  @media (max-width: 860px) { nav a:not(.btn) { display: none; } header .btn { padding: 12px 18px; font-size: .62rem; } header img { height: 28px; } }
+
+  /* hero */
+  .hero { position: relative; min-height: 100svh; display: flex; align-items: center; overflow: hidden; padding: 120px 0 140px; }
+  #chart { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .hero::after { content: ""; position: absolute; inset: 0; pointer-events: none; background: linear-gradient(90deg, var(--bg) 0%, rgba(31,32,35,.85) 38%, rgba(31,32,35,0) 75%), linear-gradient(0deg, var(--bg) 0%, transparent 30%); }
+  .hero .wrap { position: relative; z-index: 2; }
+  .hero h1 { margin: 26px 0 28px; font-size: clamp(2.9rem, 8.4vw, 7.6rem); line-height: .95; font-weight: 800; letter-spacing: -.035em; }
+  .ln { display: block; overflow: hidden; padding-bottom: .06em; }
+  .ln > span { display: inline-block; transform: translateY(110%); transition: transform 1.2s var(--ease); }
+  .go .ln > span { transform: none; }
+  .go .ln:nth-child(2) > span { transition-delay: .12s; }
+  .go .ln:nth-child(3) > span { transition-delay: .24s; }
+  .hero h1 .thin { font-weight: 300; }
+  .hero p { max-width: 520px; font-size: clamp(1rem, 1.4vw, 1.12rem); line-height: 1.7; color: #b9bbc1; margin: 0 0 40px; }
+  .hero .ctas { display: flex; flex-wrap: wrap; gap: 14px; }
+  .fade { opacity: 0; transform: translateY(24px); transition: opacity 1s var(--ease), transform 1s var(--ease); }
+  .go .fade { opacity: 1; transform: none; }
+  .go .fade.d1 { transition-delay: .45s; } .go .fade.d2 { transition-delay: .6s; } .go .fade.d3 { transition-delay: .75s; }
+  .scroll-hint { position: absolute; z-index: 2; left: 50%; bottom: 96px; transform: translateX(-50%); width: 1px; height: 54px; background: var(--line); overflow: hidden; }
+  .scroll-hint::after { content: ""; position: absolute; left: 0; top: -50%; width: 1px; height: 50%; background: var(--red); animation: drop 1.8s infinite var(--ease); }
+  @keyframes drop { to { top: 100%; } }
+  @media (max-width: 860px) { .scroll-hint { display: none; } }
+
+  /* ticker */
+  .ticker { position: absolute; z-index: 3; left: 0; right: 0; bottom: 0; border-top: 1px solid var(--line); background: rgba(24,25,27,.7); backdrop-filter: blur(8px); overflow: hidden; }
+  .ticker .rail { display: flex; width: max-content; animation: marq 38s linear infinite; }
+  .ticker span { display: inline-flex; align-items: center; gap: 12px; padding: 22px 34px; font-size: .74rem; font-weight: 600; letter-spacing: .26em; text-transform: uppercase; color: #c6c8cd; white-space: nowrap; }
+  .ticker span::after { content: ""; width: 5px; height: 5px; border-radius: 50%; background: var(--line); margin-left: 34px; }
+  .ticker b { color: var(--red); font-size: .6rem; }
+  @keyframes marq { to { transform: translateX(-50%); } }
+
+  section { position: relative; }
+  .pad { padding: clamp(90px, 14vw, 170px) 0; }
+
+  /* cifras */
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+  .stat { padding: 56px 28px 48px; border-right: 1px solid var(--line); }
+  .stat:last-child { border-right: 0; }
+  .stat .n { font-size: clamp(3rem, 6vw, 5.4rem); font-weight: 800; letter-spacing: -.04em; line-height: 1; }
+  .stat .n sup { font-size: .4em; color: var(--red); vertical-align: top; margin-left: 4px; }
+  .stat .l { margin-top: 16px; font-size: .72rem; letter-spacing: .22em; text-transform: uppercase; color: var(--mut); line-height: 1.6; }
+  .note { margin-top: 18px; font-size: .64rem; letter-spacing: .14em; color: #62656d; text-transform: uppercase; }
+  @media (max-width: 860px) { .stats { grid-template-columns: 1fr 1fr; } .stat:nth-child(2) { border-right: 0; } .stat:nth-child(-n+2) { border-bottom: 1px solid var(--line); } .stat { padding: 40px 18px 34px; } }
+
+  /* manifiesto */
+  .manifest { font-size: clamp(1.8rem, 4.4vw, 4rem); font-weight: 600; line-height: 1.18; letter-spacing: -.025em; margin: 40px 0 0; }
+  .manifest .w { color: rgba(241,241,242,.14); transition: color .4s; }
+  .manifest .w.on { color: var(--ink); }
+  .manifest .w.on.hl { color: var(--red); }
+
+  /* portafolio horizontal */
+  .hs { position: relative; }
+  .hs .sticky { position: sticky; top: 0; height: 100vh; padding-top: 76px; display: flex; flex-direction: column; justify-content: center; overflow: hidden; }
+  .hs .head { display: flex; justify-content: space-between; align-items: flex-end; gap: 24px; margin-bottom: 44px; }
+  .hs h2, .h2 { margin: 18px 0 0; font-size: clamp(2.2rem, 5vw, 4.4rem); font-weight: 800; letter-spacing: -.035em; line-height: 1; }
+  .hs .count { font-size: .8rem; font-weight: 600; letter-spacing: .2em; color: var(--mut); white-space: nowrap; }
+  .hs .count b { color: var(--ink); }
+  .track { display: flex; gap: 28px; padding-left: max(16px, (100vw - 1280px) / 2); padding-right: 16vw; will-change: transform; }
+  .card { position: relative; flex: 0 0 min(560px, 78vw); height: min(56vh, 520px); border-radius: 22px; background: var(--card); border: 1px solid var(--line); padding: 38px; display: flex; flex-direction: column; justify-content: space-between; overflow: hidden; transition: border-color .5s, transform .6s var(--ease); }
+  .card:hover { border-color: #4a4c52; transform: translateY(-6px); }
+  .card .big { position: absolute; right: -10px; bottom: -40px; font-size: 15rem; font-weight: 800; letter-spacing: -.06em; line-height: 1; color: transparent; -webkit-text-stroke: 1px #3b3d43; pointer-events: none; transition: -webkit-text-stroke-color .5s; }
+  .card:hover .big { -webkit-text-stroke-color: rgba(215,20,26,.55); }
+  .card .top { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; position: relative; }
+  .card .sector { font-size: .66rem; font-weight: 600; letter-spacing: .26em; text-transform: uppercase; color: var(--mut); }
+  .card svg { width: 64px; height: 64px; stroke: var(--red); fill: none; stroke-width: 1.6; flex: none; }
+  .card h3 { margin: 0; font-size: clamp(1.9rem, 3vw, 2.7rem); font-weight: 800; letter-spacing: -.03em; position: relative; }
+  .card p { margin: 12px 0 0; color: #a9abb2; line-height: 1.6; max-width: 360px; position: relative; font-size: .95rem; }
+  .card .where { margin-top: 22px; font-size: .66rem; letter-spacing: .22em; text-transform: uppercase; color: var(--ink); position: relative; display: flex; gap: 10px; align-items: center; }
+  .card .where::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--red); }
+  .card.next { background: repeating-linear-gradient(135deg, #222326 0 14px, #26272b 14px 28px); border-style: dashed; border-color: #4a4c52; }
+  .card.next h3 { filter: blur(9px); user-select: none; }
+  .card.next .soon { position: relative; display: inline-flex; align-items: center; gap: 10px; font-size: .7rem; font-weight: 700; letter-spacing: .26em; text-transform: uppercase; color: var(--red); }
+  .card.next .soon i { width: 8px; height: 8px; border-radius: 50%; background: var(--red); animation: pulse 1.6s infinite; }
+  @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(215,20,26,.6); } 100% { box-shadow: 0 0 0 14px rgba(215,20,26,0); } }
+  .hs .prog { margin-top: 44px; height: 2px; background: var(--line); }
+  .hs .prog i { display: block; height: 100%; width: 0; background: var(--red); }
+  @media (max-width: 860px) {
+    .hs .sticky { position: static; height: auto; padding: 90px 0; }
+    .track { overflow-x: auto; scroll-snap-type: x mandatory; padding-right: 16px; transform: none !important; scrollbar-width: none; }
+    .track::-webkit-scrollbar { display: none; }
+    .card { scroll-snap-align: start; height: 440px; padding: 28px; }
+    .card .big { font-size: 10rem; }
+    .hs .prog { display: none; }
+  }
+
+  /* dos motores */
+  .engines { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; margin-top: 56px; }
+  .eng { border: 1px solid var(--line); border-radius: 22px; padding: 38px; background: linear-gradient(160deg, #24252a, var(--bg)); overflow: hidden; }
+  .eng .k { font-size: .66rem; font-weight: 600; letter-spacing: .26em; text-transform: uppercase; color: var(--mut); }
+  .eng h3 { margin: 12px 0 26px; font-size: clamp(1.6rem, 2.6vw, 2.2rem); font-weight: 800; letter-spacing: -.03em; }
+  .eng svg { width: 100%; height: 140px; display: block; }
+  .eng svg path.l { fill: none; stroke: var(--ink); stroke-width: 2.5; stroke-linecap: round; stroke-dasharray: 1; stroke-dashoffset: 1; transition: stroke-dashoffset 2.2s var(--ease); }
+  .eng svg path.a { fill: url(#gRed); opacity: 0; transition: opacity 1.4s 1s; }
+  .eng.in svg path.l { stroke-dashoffset: 0; }
+  .eng.in svg path.a { opacity: 1; }
+  .eng ul { list-style: none; margin: 26px 0 0; padding: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 0 20px; }
+  .eng li { padding: 16px 0; border-top: 1px solid var(--line); font-size: .8rem; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; display: flex; justify-content: space-between; gap: 8px; }
+  .eng li span { color: var(--red); }
+  @media (max-width: 860px) { .engines { grid-template-columns: 1fr; } .eng { padding: 28px; } }
+
+  /* fundadores */
+  .founders { display: grid; grid-template-columns: minmax(0, 380px) 1fr; gap: clamp(50px, 7vw, 100px); align-items: center; }
+  .pic { position: relative; margin: 0 0 0 26px; }
+  .pic img { display: block; width: 100%; height: auto; -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 14%); mask-image: linear-gradient(to bottom, transparent 0, #000 14%); opacity: 0; transform: scale(1.04); transition: opacity 1.4s var(--ease), transform 1.8s var(--ease); }
+  .pic::before { content: ""; position: absolute; left: -26px; top: 10%; height: 62%; width: 6px; background: var(--red); transform: scaleY(0); transform-origin: top; transition: transform 1.2s var(--ease) .3s; }
+  .pic.in img { opacity: 1; transform: none; }
+  .pic.in::before { transform: none; }
+  .founders .name { margin: 20px 0 0; font-size: clamp(2.2rem, 3.8vw, 3.4rem); font-weight: 800; letter-spacing: -.04em; line-height: .95; }
+  .founders .name span { display: block; font-weight: 300; }
+  .founders .role { margin-top: 18px; font-size: .72rem; font-weight: 600; letter-spacing: .24em; text-transform: uppercase; color: var(--red); }
+  .founders .sig b { font-size: 1.8rem; letter-spacing: -.03em; }
+  .soc-head { display: grid; grid-template-columns: 1.2fr .8fr; gap: 60px; align-items: center; }
+  .pic.soc::before { left: auto; right: -26px; }
+  .pic.soc { margin: 0 26px 0 0; }
+  @media (max-width: 860px) { .soc-head { grid-template-columns: 1fr; gap: 40px; } }
+  .founders blockquote { margin: 26px 0 0; font-size: clamp(1.25rem, 2vw, 1.6rem); font-weight: 300; line-height: 1.55; }
+  .founders .sig { margin-top: 30px; display: flex; gap: 40px; flex-wrap: wrap; }
+  .founders .sig div { font-size: .7rem; letter-spacing: .2em; text-transform: uppercase; color: var(--mut); line-height: 1.8; }
+  .founders .sig b { display: block; color: var(--ink); font-size: 1.8rem; letter-spacing: -.03em; }
+  @media (max-width: 860px) { .founders { grid-template-columns: 1fr; gap: 30px; } .founders .pic { max-width: 300px; } }
+
+  /* contacto */
+  .cta { background: var(--bg2); border-top: 1px solid var(--line); overflow: hidden; }
+  .cta .huge { display: block; font-size: clamp(3.6rem, 13vw, 12rem); font-weight: 800; letter-spacing: -.05em; line-height: .9; margin: 24px 0 50px; color: rgba(241,241,242,0); -webkit-text-stroke: 1.5px #4a4c52; transition: color 1.4s var(--ease) .3s, -webkit-text-stroke-color 1.2s; }
+  .cta .huge.in { color: var(--ink); -webkit-text-stroke-color: var(--ink); }
+  .cta .huge em { font-style: normal; color: var(--red); -webkit-text-stroke: 0; }
+  .form { display: grid; grid-template-columns: repeat(4, 1fr); gap: 22px 14px; align-items: end; }
+  .form .btn { justify-self: start; }
+  .form label { display: flex; flex-direction: column; gap: 10px; font-size: .64rem; font-weight: 600; letter-spacing: .22em; text-transform: uppercase; color: var(--mut); }
+  .form input, .form select { font: inherit; font-size: 1rem; letter-spacing: 0; text-transform: none; color: var(--ink); background: transparent; border: 0; border-bottom: 1px solid var(--line); padding: 12px 0; outline: none; border-radius: 0; transition: border-color .3s; -webkit-appearance: none; appearance: none; }
+  .form select option { background: var(--bg2); }
+  .form input:focus, .form select:focus { border-color: var(--red); }
+  .form .ok { grid-column: 1 / -1; font-size: .8rem; color: var(--mut); min-height: 1.2em; margin: 0; }
+  @media (max-width: 860px) { .form { grid-template-columns: 1fr; } .form .btn { justify-content: center; margin-top: 10px; } }
+
+  footer { border-top: 1px solid var(--line); background: var(--bg2); padding: 40px 0; }
+  footer .wrap { display: flex; justify-content: space-between; gap: 30px; flex-wrap: wrap; align-items: center; }
+  footer img { height: 28px; }
+  footer p { margin: 0; max-width: 640px; font-size: .7rem; line-height: 1.7; color: #6c6f77; }
+
+  /* reveal genérico */
+  .rv { opacity: 0; transform: translateY(40px); transition: opacity 1.1s var(--ease), transform 1.1s var(--ease); }
+  .rv.in { opacity: 1; transform: none; }
+
+  /* video modal */
+  .modal { position: fixed; inset: 0; z-index: 80; background: rgba(12,12,14,.92); display: grid; place-items: center; opacity: 0; visibility: hidden; transition: opacity .5s, visibility .5s; padding: 16px; }
+  .modal.open { opacity: 1; visibility: visible; }
+  .modal .frame { width: min(1200px, 100%); aspect-ratio: 16 / 9; border-radius: 16px; overflow: hidden; border: 1px solid var(--line); background: #000; }
+  .modal iframe { width: 100%; height: 100%; border: 0; display: block; }
+  .modal .x { position: absolute; top: 20px; right: 20px; width: 48px; height: 48px; border-radius: 50%; border: 1px solid var(--line); background: transparent; color: var(--ink); font-size: 1.2rem; cursor: pointer; }
+  @media (orientation: portrait) { .modal .frame { aspect-ratio: 9 / 16; width: auto; height: min(84vh, 100%); max-width: 100%; } }
+
+  /* socios */
+  .lead { max-width: 640px; font-size: clamp(1.05rem, 1.6vw, 1.25rem); line-height: 1.7; color: #b9bbc1; margin: 30px 0 0; }
+  .give { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; margin-top: 60px; }
+  .give > div { border: 1px solid var(--line); border-radius: 22px; padding: 36px; background: var(--card); }
+  .give > div.ours { background: linear-gradient(160deg, #2a1d1f, var(--card) 60%); border-color: #4a2e31; }
+  .give .k { font-size: .66rem; font-weight: 700; letter-spacing: .26em; text-transform: uppercase; color: var(--mut); margin-bottom: 18px; }
+  .give ul { list-style: none; margin: 0; padding: 0; }
+  .give li { padding: 16px 0 16px 30px; border-top: 1px solid var(--line); position: relative; line-height: 1.5; }
+  .give li::before { content: ""; position: absolute; left: 0; top: 26px; width: 14px; height: 2px; background: var(--red); }
+  .steps { list-style: none; margin: 70px 0 0; padding: 0; display: grid; grid-template-columns: repeat(4, 1fr); }
+  .steps li { padding: 30px 26px 0 0; border-top: 2px solid var(--line); position: relative; }
+  .steps li::before { content: ""; position: absolute; top: -2px; left: 0; width: 40px; height: 2px; background: var(--red); }
+  .steps b { font-size: .8rem; letter-spacing: .2em; color: var(--red); }
+  .steps h4 { margin: 14px 0 10px; font-size: 1.2rem; font-weight: 700; letter-spacing: -.01em; }
+  .steps p { margin: 0; color: #a9abb2; line-height: 1.6; font-size: .92rem; }
+  .cta .sub { max-width: 560px; color: #b9bbc1; line-height: 1.7; margin: -26px 0 44px; }
+  .form .full { grid-column: 1 / -1; }
+  .form textarea { font: inherit; font-size: 1rem; letter-spacing: 0; text-transform: none; color: var(--ink); background: transparent; border: 1px solid var(--line); border-radius: 14px; padding: 16px; outline: none; resize: vertical; min-height: 130px; transition: border-color .3s; }
+  .form textarea:focus { border-color: var(--red); }
+  @media (max-width: 860px) { .give { grid-template-columns: 1fr; } .give > div { padding: 26px; } .steps { grid-template-columns: 1fr 1fr; gap: 34px 20px; } }
+  @media (max-width: 520px) { .steps { grid-template-columns: 1fr; } }
+
+  /* mercados en directo */
+  .live { margin-top: clamp(80px, 10vw, 130px); scroll-margin-top: 100px; }
+  .live .bar { display: flex; justify-content: space-between; align-items: flex-end; gap: 20px; flex-wrap: wrap; margin-bottom: 30px; }
+  .live h3 { margin: 16px 0 0; font-size: clamp(1.8rem, 3.6vw, 3rem); font-weight: 800; letter-spacing: -.03em; line-height: 1.05; }
+  .live .dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: #2fbf71; margin-right: 10px; animation: pulseG 1.6s infinite; vertical-align: middle; }
+  @keyframes pulseG { 0% { box-shadow: 0 0 0 0 rgba(47,191,113,.6); } 100% { box-shadow: 0 0 0 12px rgba(47,191,113,0); } }
+  .ranges { display: flex; gap: 6px; border: 1px solid var(--line); border-radius: 999px; padding: 5px; }
+  .ranges button { font: inherit; font-size: .66rem; font-weight: 700; letter-spacing: .16em; color: var(--mut); background: transparent; border: 0; border-radius: 999px; padding: 9px 14px; cursor: pointer; transition: background .3s, color .3s; }
+  .ranges button[aria-pressed="true"] { background: var(--ink); color: var(--bg); }
+  .assets { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; }
+  .asset { border: 1px solid var(--line); border-radius: 18px; background: var(--card); padding: 20px 14px 10px; display: flex; flex-direction: column; min-height: 300px; }
+  .asset .k { padding: 0 6px 10px; font-size: .64rem; font-weight: 700; letter-spacing: .26em; text-transform: uppercase; color: var(--mut); display: flex; justify-content: space-between; }
+  .asset .k b { color: var(--red); }
+  .asset .tv { flex: 1; min-height: 240px; }
+  .asset .tv .tradingview-widget-container, .asset .tv .tradingview-widget-container__widget { height: 100%; }
+  .asset .tradingview-widget-copyright { display: none; }
+  .live .src { margin-top: 16px; font-size: .64rem; letter-spacing: .1em; color: #6c6f77; line-height: 1.7; }
+  .live .src a { color: var(--mut); text-decoration: underline; }
+  @media (max-width: 1100px) { .assets { grid-template-columns: 1fr 1fr; } }
+  @media (max-width: 600px) {
+    .assets { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; gap: 14px; margin-right: -16px; padding-right: 16px; scrollbar-width: none; }
+    .assets::-webkit-scrollbar { display: none; }
+    .asset { flex: 0 0 84%; scroll-snap-align: start; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation: none !important; transition: none !important; }
+    .ln > span, .fade, .rv { transform: none !important; opacity: 1 !important; }
+  }
+</style>
+</head>
+<body>
+<div class="grain" aria-hidden="true"></div>
+<div class="cur" aria-hidden="true"></div><div class="cur-ring" aria-hidden="true"></div>
+
+<div id="pre" aria-hidden="true"><div class="box"><img src="assets/logo-st.png" alt=""><div class="bar"><i></i></div></div></div>
+
+<header id="top">
+  <div class="wrap">
+    <a href="#"><img src="assets/logo-st.png" alt="S&amp;T Capital Group"></a>
+    <nav>
+      <a href="#portafolio">Portafolio</a>
+      <a href="#motores">Estrategia</a>
+      <a href="#socios">Socios</a>
+      <a href="#contacto" class="btn mag">Hablemos</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <section class="hero" id="hero">
+    <canvas id="chart" aria-hidden="true"></canvas>
+    <div class="wrap">
+      <div class="eyebrow fade">Holding privado · España · Colombia · Venezuela</div>
+      <h1>
+        <span class="ln"><span>Empresas reales.</span></span>
+        <span class="ln"><span class="thin">Capital en</span></span>
+        <span class="ln"><span>movimiento<span class="red">.</span></span></span>
+      </h1>
+      <p class="fade d1">Operamos compañías en movilidad, inmobiliario, construcción y moda, e invertimos en los mercados que mueven el mundo. Desde España, Colombia y Venezuela.</p>
+      <div class="ctas fade d2">
+        <a href="#socios" class="btn mag">Proponer una idea <span aria-hidden="true">→</span></a>
+        <button class="btn ghost mag" id="openVideo" type="button"><span class="play" aria-hidden="true">▶</span> Ver el video</button>
+      </div>
+    </div>
+    <div class="scroll-hint" aria-hidden="true"></div>
+    <div class="ticker" aria-label="Sectores e inversiones">
+      <div class="rail">
+        <span>Movilidad</span><span>Inmobiliario</span><span>Construcción</span><span>Moda</span><span>España · Colombia · Venezuela</span>
+        <span>ETFs <b>▲</b></span><span>Bonos <b>▲</b></span><span>Cripto <b>▲</b></span><span>Inteligencia artificial <b>▲</b></span><span>05 · Próximamente</span>
+        <span aria-hidden="true">Movilidad</span><span aria-hidden="true">Inmobiliario</span><span aria-hidden="true">Construcción</span><span aria-hidden="true">Moda</span><span aria-hidden="true">España · Colombia · Venezuela</span>
+        <span aria-hidden="true">ETFs <b>▲</b></span><span aria-hidden="true">Bonos <b>▲</b></span><span aria-hidden="true">Cripto <b>▲</b></span><span aria-hidden="true">Inteligencia artificial <b>▲</b></span><span aria-hidden="true">05 · Próximamente</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="pad">
+    <div class="wrap">
+      <div class="stats rv">
+        <div class="stat"><div class="n"><span data-count="4">0</span><sup>+1</sup></div><div class="l">Empresas<br>operativas</div></div>
+        <div class="stat"><div class="n"><span data-count="8">0</span></div><div class="l">Sectores y clases<br>de activo</div></div>
+        <div class="stat"><div class="n"><span data-count="3">0</span></div><div class="l">Países<br>España · Colombia · Venezuela</div></div>
+        <div class="stat"><div class="n"><span data-count="5000" data-prefix="+">0</span></div><div class="l">Clientes<br>atendidos</div></div>
+      </div>
+      <div class="note">Cifras de ejemplo · pendientes de actualizar</div>
+
+      <div class="eyebrow" style="margin-top:clamp(90px,12vw,150px)">Nuestra forma de crecer</div>
+      <p class="manifest" id="manifest">No buscamos titulares. Buscamos empresas que funcionen, equipos que ejecuten y capital que trabaje. Cada negocio que sumamos hace más fuerte al siguiente. Así se construye un grupo.</p>
+    </div>
+  </section>
+
+  <section class="hs" id="portafolio">
+    <div class="sticky">
+      <div class="wrap">
+        <div class="head">
+          <div><div class="eyebrow">Portafolio</div><h2>Cinco empresas.<br>Una dirección.</h2></div>
+          <div class="count"><b id="cnum">01</b> / 05</div>
+        </div>
+      </div>
+      <div class="track" id="track">
+        <article class="card">
+          <div class="big" aria-hidden="true">01</div>
+          <div class="top"><span class="sector">Movilidad</span>
+            <svg viewBox="0 0 64 64" aria-hidden="true"><path d="M22 4 12 60M42 4l10 56M32 6v8M32 24v8M32 42v8"/></svg></div>
+          <div><h3>On Track Assistance</h3><p>Asistencia en carretera rápida y fiable, 24 horas, los 365 días del año.</p><div class="where">Palma · Barcelona</div></div>
+        </article>
+        <article class="card">
+          <div class="big" aria-hidden="true">02</div>
+          <div class="top"><span class="sector">Inmobiliario</span>
+            <svg viewBox="0 0 64 64" aria-hidden="true"><path d="M8 30 32 10l24 20M14 26v28h36V26M26 54V38h12v16"/></svg></div>
+          <div><h3>Predia</h3><p>Gestión integral de alquileres: rentabilidad para el propietario, tranquilidad para el inquilino.</p><div class="where">[País]</div></div>
+        </article>
+        <article class="card">
+          <div class="big" aria-hidden="true">03</div>
+          <div class="top"><span class="sector">Construcción</span>
+            <svg viewBox="0 0 64 64" aria-hidden="true"><path d="M8 56h48M14 56V22l18-12 18 12v34M14 34h36M14 46h36M32 10v46"/></svg></div>
+          <div><h3>Murom</h3><p>Diseño y construcción. Proyectos que se entregan como se prometen.</p><div class="where">[País]</div></div>
+        </article>
+        <article class="card">
+          <div class="big" aria-hidden="true">04</div>
+          <div class="top"><span class="sector">Moda</span>
+            <svg viewBox="0 0 64 64" aria-hidden="true"><path d="M32 18a5 5 0 1 0-5-5M32 18v4L6 44h52L32 22"/></svg></div>
+          <div><h3>Volée</h3><p>Una marca de moda con identidad propia, pensada para durar.</p><div class="where">volee.es</div></div>
+        </article>
+        <article class="card next">
+          <div class="big" aria-hidden="true">05</div>
+          <div class="top"><span class="sector">Nuevo sector</span><span class="soon"><i></i>Próximamente</span></div>
+          <div><h3 aria-label="Nombre por anunciar">Nueva empresa</h3><p>La quinta ya está en camino. La anunciaremos cuando esté lista.</p></div>
+        </article>
+      </div>
+      <div class="wrap"><div class="prog"><i id="prog"></i></div></div>
+    </div>
+  </section>
+
+  <section class="pad" id="motores">
+    <div class="wrap">
+      <div class="eyebrow rv">Estrategia</div>
+      <h2 class="h2 rv">Dos motores.<br>Un solo grupo.</h2>
+      <div class="engines">
+        <div class="eng rv">
+          <div class="k">Motor 01</div><h3>Economía real</h3>
+          <svg viewBox="0 0 400 140" preserveAspectRatio="none" aria-hidden="true">
+            <defs><linearGradient id="gRed" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f1f1f2" stop-opacity=".16"/><stop offset="1" stop-color="#f1f1f2" stop-opacity="0"/></linearGradient></defs>
+            <path class="a" d="M0 128 L40 122 L80 118 L120 106 L160 100 L200 86 L240 78 L280 60 L320 50 L360 30 L400 16 L400 140 L0 140Z"/>
+            <path class="l" pathLength="1" d="M0 128 L40 122 L80 118 L120 106 L160 100 L200 86 L240 78 L280 60 L320 50 L360 30 L400 16"/>
+          </svg>
+          <ul><li>Movilidad <span>01</span></li><li>Inmobiliario <span>02</span></li><li>Construcción <span>03</span></li><li>Moda <span>04</span></li></ul>
+        </div>
+        <div class="eng rv">
+          <div class="k">Motor 02</div><h3>Mercados</h3>
+          <svg viewBox="0 0 400 140" preserveAspectRatio="none" aria-hidden="true">
+            <path class="a" d="M0 120 L30 112 L60 118 L90 96 L120 104 L150 80 L180 88 L210 64 L240 72 L270 50 L300 58 L330 36 L360 42 L400 18 L400 140 L0 140Z"/>
+            <path class="l" pathLength="1" d="M0 120 L30 112 L60 118 L90 96 L120 104 L150 80 L180 88 L210 64 L240 72 L270 50 L300 58 L330 36 L360 42 L400 18"/>
+          </svg>
+          <ul><li>ETFs <span>A</span></li><li>Bonos <span>B</span></li><li>Cripto <span>C</span></li><li>IA <span>D</span></li></ul>
+        </div>
+      </div>
+      <div class="note">Gráficos de los motores ilustrativos · las cotizaciones de abajo son reales</div>
+
+      <div class="live" id="mercados">
+        <div class="bar">
+          <div><div class="eyebrow"><span class="dot" aria-hidden="true"></span>Mercados en directo</div><h3>Así se mueven los activos<br>en los que invertimos.</h3></div>
+          <div class="ranges" role="group" aria-label="Periodo">
+            <button type="button" data-r="1M">1M</button><button type="button" data-r="12M" aria-pressed="true">1A</button><button type="button" data-r="60M">5A</button><button type="button" data-r="ALL">Todo</button>
+          </div>
+        </div>
+        <div class="assets" id="assets"></div>
+        <p class="src">Cotizaciones en tiempo real (o con un ligero retraso según el mercado) facilitadas por <a href="https://es.tradingview.com/" target="_blank" rel="noopener">TradingView</a>. Activos de referencia de cada categoría. No constituye una recomendación de inversión; rentabilidades pasadas no garantizan rentabilidades futuras.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="pad" id="fundadores" style="padding-top:0">
+    <div class="wrap founders">
+      <figure class="pic" id="st"><img src="assets/fundador/principal-bn.jpg" alt="Jonnathan Salazar, fundador de S&amp;T Capital Group" loading="lazy" width="1200" height="1500"></figure>
+      <div class="rv">
+        <div class="eyebrow">Fundador</div>
+        <h2 class="name">Jonnathan<span>Salazar</span></h2>
+        <div class="role">Fundador y CEO · S&amp;T Capital Group</div>
+        <blockquote>“Empecé con una empresa y una promesa: hacer las cosas bien. Hoy son cuatro, y la quinta ya está en camino.”</blockquote>
+        <div class="sig"><div><b>4+1</b>Empresas</div><div><b>3</b>Países</div></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="pad" id="socios">
+    <div class="wrap">
+      <div class="eyebrow rv">Socios</div>
+      <h2 class="h2 rv">La empresa 06<br>puede ser <span class="red">la tuya.</span></h2>
+      <p class="lead rv">No buscamos dinero. Buscamos personas con ideas de negocio y ganas de ejecutarlas. Tú pones la idea y el empuje; nosotros, la estructura para hacerla crecer.</p>
+      <a href="#contacto" class="btn mag rv" style="margin-top:34px">Cuéntanos tu idea <span aria-hidden="true">→</span></a>
+      <div class="give">
+        <div class="ours rv"><div class="k">Lo que aporta S&amp;T</div><ul>
+          <li>Experiencia operando cuatro empresas en sectores distintos</li>
+          <li>Presencia en España, Colombia y Venezuela</li>
+          <li>Recursos del grupo para arrancar los proyectos que elegimos</li>
+          <li>Administración, marketing y tecnología compartidos</li>
+          <li>Una red de clientes, proveedores y contactos</li>
+        </ul></div>
+        <div class="rv"><div class="k">Lo que buscamos en ti</div><ul>
+          <li>Una idea que resuelva un problema real, con un cliente claro</li>
+          <li>Ganas de operarla, no solo de proponerla</li>
+          <li>Conocimiento del sector o del mercado</li>
+          <li>Visión a largo plazo y compromiso</li>
+          <li>Cualquier sector: el nuestro o uno nuevo con potencial</li>
+        </ul></div>
+      </div>
+      <ol class="steps">
+        <li class="rv"><b>01</b><h4>Nos cuentas tu idea</h4><p>En pocas líneas, con el formulario de abajo.</p></li>
+        <li class="rv"><b>02</b><h4>La analizamos</h4><p>Revisamos mercado, números y encaje con el grupo.</p></li>
+        <li class="rv"><b>03</b><h4>La construimos juntos</h4><p>Definimos plan, equipo y la participación de cada socio.</p></li>
+        <li class="rv"><b>04</b><h4>Crece dentro del grupo</h4><p>Tu empresa se suma al portafolio con el respaldo de S&amp;T.</p></li>
+      </ol>
+    </div>
+  </section>
+
+  <section class="cta pad" id="contacto">
+    <div class="wrap">
+      <div class="eyebrow">Socios con ideas</div>
+      <span class="huge" id="huge">¿Hablamos<em>?</em></span>
+      <p class="sub">Cuéntanos tu idea. La leemos con atención y la tratamos con total confidencialidad.</p>
+      <form class="form" id="form" novalidate>
+        <label>Nombre<input name="nombre" required autocomplete="name"></label>
+        <label>Email<input name="email" type="email" required autocomplete="email"></label>
+        <label>País
+          <select name="pais"><option>España</option><option>Colombia</option><option>Venezuela</option><option>Otro</option></select>
+        </label>
+        <label>Sector<input name="sector" placeholder="Ej. tecnología, salud…"></label>
+        <label class="full">Tu idea<textarea name="idea" maxlength="1500" required placeholder="¿Qué problema resuelve, para quién y por qué tú?"></textarea></label>
+        <button class="btn mag" type="submit">Enviar mi idea →</button>
+        <p class="ok" id="ok" role="status"></p>
+      </form>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <img src="assets/logo-st.png" alt="S&amp;T Capital Group">
+    <p>© 2026 S&amp;T Capital Group. S&amp;T Capital Group no capta fondos de terceros. La información de esta web es de carácter general y no constituye una oferta ni asesoramiento de inversión. Invertir en mercados financieros, incluidas criptomonedas, implica riesgos.</p>
+  </div>
+</footer>
+
+<div class="modal" id="modal" role="dialog" aria-modal="true" aria-label="Video S&amp;T Capital Group">
+  <button class="x" id="closeVideo" type="button" aria-label="Cerrar">✕</button>
+  <div class="frame"><iframe id="vframe" title="Video" allow="autoplay; fullscreen"></iframe></div>
+</div>
+
+<script>
+(() => {
+  const CONTACT_EMAIL = "info@stcapitalgroup.com";
+  const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const $ = (s, r = document) => r.querySelector(s);
+  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+
+  /* precarga → entrada del hero */
+  const start = () => { $("#pre").classList.add("done"); $("#hero").classList.add("go"); };
+  addEventListener("load", () => setTimeout(start, reduce ? 0 : 1500));
+  setTimeout(start, 4000); // por si alguna imagen tarda
+
+  /* gráfico vivo del hero */
+  const cv = $("#chart"), cx = cv.getContext("2d");
+  let cw = 0, ch = 0, mx = 0, my = 0, t0 = performance.now();
+  const resize = () => { const d = Math.min(devicePixelRatio || 1, 2); cw = cv.clientWidth; ch = cv.clientHeight; cv.width = cw * d; cv.height = ch * d; cx.setTransform(d, 0, 0, d, 0, 0); };
+  resize(); addEventListener("resize", resize);
+  addEventListener("pointermove", e => { mx = e.clientX / innerWidth - .5; my = e.clientY / innerHeight - .5; });
+  const series = [
+    { a: .42, f: [.011, .023], amp: 22, c: "rgba(241,241,242,.10)", w: 1 },
+    { a: .30, f: [.016, .031], amp: 16, c: "rgba(241,241,242,.07)", w: 1 },
+    { a: .55, f: [.008, .019], amp: 26, c: "#f1f1f2", w: 2.4, main: true },
+  ];
+  function drawChart(now) {
+    const t = (now - t0) / 1000, rev = reduce ? 1 : clamp((t - 1.6) / 2.6, 0, 1);
+    const e = 1 - Math.pow(1 - rev, 3);
+    cx.clearRect(0, 0, cw, ch);
+    // rejilla
+    cx.strokeStyle = "rgba(241,241,242,.045)"; cx.lineWidth = 1;
+    const step = 80, ox = (t * 12) % step;
+    for (let x = -ox; x < cw; x += step) { cx.beginPath(); cx.moveTo(x, 0); cx.lineTo(x, ch); cx.stroke(); }
+    for (let y = 0; y < ch; y += step) { cx.beginPath(); cx.moveTo(0, y); cx.lineTo(cw, y); cx.stroke(); }
+    const m = cw < 860, x0 = m ? 0 : cw * .18, x1 = cw * .98, base = m ? ch * .9 : ch * .86, hf = m ? .32 : 1, px = mx * 18, py = my * 12;
+    cx.globalAlpha = m ? .6 : 1;
+    for (const s of series) {
+      const end = x0 + (x1 - x0) * e; let hx = x0, hy = base;
+      cx.beginPath();
+      for (let x = x0; x <= end; x += 4) {
+        const k = (x - x0) / (x1 - x0);
+        const y = base - Math.pow(k, 1.7) * ch * s.a * hf - Math.sin(x * s.f[0] + t * .8) * s.amp * k - Math.sin(x * s.f[1] - t * 1.3) * s.amp * .5 * k;
+        x === x0 ? cx.moveTo(x + px, y + py) : cx.lineTo(x + px, y + py); hx = x + px; hy = y + py;
+      }
+      cx.strokeStyle = s.c; cx.lineWidth = s.w; cx.stroke();
+      if (s.main && e > 0) {
+        cx.lineTo(hx, base + 40); cx.lineTo(x0 + px, base + 40); cx.closePath();
+        const g = cx.createLinearGradient(0, ch * .3, 0, base); g.addColorStop(0, "rgba(241,241,242,.09)"); g.addColorStop(1, "rgba(241,241,242,0)");
+        cx.fillStyle = g; cx.fill();
+        const p = (Math.sin(t * 3) + 1) / 2;
+        cx.beginPath(); cx.arc(hx, hy, 6 + p * 10, 0, 7); cx.fillStyle = `rgba(241,241,242,${.25 - p * .2})`; cx.fill();
+        cx.beginPath(); cx.arc(hx, hy, 4.5, 0, 7); cx.fillStyle = "#f1f1f2"; cx.fill();
+      }
+    }
+    cx.globalAlpha = 1;
+    if (!reduce) requestAnimationFrame(drawChart);
+  }
+  requestAnimationFrame(drawChart);
+
+  /* header sólido al bajar */
+  const header = $("#top");
+
+  /* aparición al entrar en pantalla */
+  const io = new IntersectionObserver(es => es.forEach(en => { if (en.isIntersecting) { en.target.classList.add("in"); io.unobserve(en.target); } }), { threshold: .2 });
+  document.querySelectorAll(".rv, .eng, #st, #huge").forEach(el => io.observe(el));
+
+  /* contadores */
+  const cio = new IntersectionObserver(es => es.forEach(en => {
+    if (!en.isIntersecting) return; cio.unobserve(en.target);
+    const el = en.target, to = +el.dataset.count, pre = el.dataset.prefix || "", t1 = performance.now(), dur = reduce ? 0 : 1800;
+    const tick = now => { const k = dur ? clamp((now - t1) / dur, 0, 1) : 1, v = Math.round(to * (1 - Math.pow(2, -10 * k)));
+      el.textContent = pre + (k >= 1 ? to : v).toLocaleString("es-ES"); if (k < 1) requestAnimationFrame(tick); };
+    requestAnimationFrame(tick);
+  }), { threshold: .6 });
+  document.querySelectorAll("[data-count]").forEach(el => cio.observe(el));
+
+  /* manifiesto palabra a palabra */
+  const man = $("#manifest");
+  const hl = new Set(["funcionen,", "ejecuten", "trabaje.", "grupo."]);
+  man.innerHTML = man.textContent.trim().split(/\s+/).map(w => `<span class="w${hl.has(w) ? " hl" : ""}">${w}</span>`).join(" ");
+  const words = [...man.querySelectorAll(".w")];
+
+  /* portafolio horizontal */
+  const hs = $(".hs"), track = $("#track"), prog = $("#prog"), cnum = $("#cnum"), cards = [...track.children];
+  const mobile = () => innerWidth <= 860;
+  let dist = 0;
+  const sizeHS = () => {
+    if (mobile()) { hs.style.height = ""; track.style.transform = ""; return; }
+    dist = Math.max(0, track.scrollWidth - innerWidth);
+    hs.style.height = (innerHeight + dist) + "px";
+  };
+  addEventListener("resize", sizeHS); addEventListener("load", sizeHS); sizeHS();
+  track.addEventListener("scroll", () => { // swipe en móvil
+    const i = Math.round(track.scrollLeft / (cards[0].offsetWidth + 28)); cnum.textContent = String(clamp(i + 1, 1, 5)).padStart(2, "0");
+  }, { passive: true });
+
+  const onScroll = () => {
+    const y = scrollY;
+    header.classList.toggle("solid", y > 40);
+    // manifiesto
+    const r = man.getBoundingClientRect(), p = clamp((innerHeight * .85 - r.top) / (r.height + innerHeight * .35), 0, 1);
+    const n = reduce ? words.length : Math.round(p * words.length);
+    words.forEach((w, i) => w.classList.toggle("on", i < n));
+    // horizontal
+    if (!mobile()) {
+      const hr = hs.getBoundingClientRect(), hp = clamp(-hr.top / Math.max(1, hs.offsetHeight - innerHeight), 0, 1);
+      track.style.transform = `translate3d(${-hp * dist}px,0,0)`;
+      prog.style.width = hp * 100 + "%";
+      cnum.textContent = String(clamp(Math.floor(hp * 4.999) + 1, 1, 5)).padStart(2, "0");
+    }
+  };
+  addEventListener("scroll", onScroll, { passive: true }); onScroll();
+
+  /* cursor + botones magnéticos (solo ratón) */
+  if (matchMedia("(pointer: fine)").matches && !reduce) {
+    const dot = $(".cur"), ring = $(".cur-ring"); let rx = 0, ry = 0, tx = 0, ty = 0;
+    addEventListener("pointermove", e => { tx = e.clientX; ty = e.clientY; dot.style.transform = `translate(${tx}px,${ty}px) translate(-50%,-50%)`; });
+    const loop = () => { rx += (tx - rx) * .16; ry += (ty - ry) * .16; ring.style.transform = `translate(${rx}px,${ry}px) translate(-50%,-50%)`; requestAnimationFrame(loop); }; loop();
+    document.querySelectorAll("a, button, .card, input, select, textarea").forEach(el => {
+      el.addEventListener("pointerenter", () => ring.classList.add("big"));
+      el.addEventListener("pointerleave", () => ring.classList.remove("big"));
+    });
+    document.querySelectorAll(".mag").forEach(b => {
+      b.addEventListener("pointermove", e => { const r = b.getBoundingClientRect(); b.style.transform = `translate(${(e.clientX - r.left - r.width / 2) * .25}px,${(e.clientY - r.top - r.height / 2) * .35}px)`; });
+      b.addEventListener("pointerleave", () => { b.style.transform = ""; });
+    });
+  }
+
+  /* mercados en directo (TradingView) · cambie aquí los activos */
+  const ASSETS = [
+    { cat: "ETFs",    tag: "A", symbol: "AMEX:VOO" },           // Vanguard S&P 500
+    { cat: "Bonos",   tag: "B", symbol: "NASDAQ:TLT" },         // Bonos EE. UU. 20+ años
+    { cat: "Cripto",  tag: "C", symbol: "BITSTAMP:BTCUSD" },    // Bitcoin
+    { cat: "IA",      tag: "D", symbol: "NASDAQ:NVDA" },        // NVIDIA
+  ];
+  const box = $("#assets");
+  const buildAssets = range => {
+    box.innerHTML = "";
+    ASSETS.forEach(a => {
+      const card = document.createElement("div"); card.className = "asset";
+      card.innerHTML = `<div class="k">${a.cat}<b>${a.tag}</b></div><div class="tv"><div class="tradingview-widget-container"><div class="tradingview-widget-container__widget"></div></div></div>`;
+      const sc = document.createElement("script");
+      sc.src = "https://s3.tradingview.com/external-embedding/embed-widget-mini-symbol-overview.js"; sc.async = true;
+      sc.textContent = JSON.stringify({ symbol: a.symbol, width: "100%", height: "100%", locale: "es", dateRange: range, colorTheme: "dark",
+        isTransparent: true, autosize: true, largeChartUrl: "", chartOnly: false, noTimeScale: false,
+        trendLineColor: "rgba(241, 241, 242, 1)", underLineColor: "rgba(241, 241, 242, 0.14)", underLineBottomColor: "rgba(241, 241, 242, 0)" });
+      card.querySelector(".tradingview-widget-container").appendChild(sc);
+      box.appendChild(card);
+    });
+  };
+  // se cargan cuando la sección se acerca a la pantalla
+  const lio = new IntersectionObserver(es => { if (es[0].isIntersecting) { lio.disconnect(); buildAssets("12M"); } }, { rootMargin: "400px" });
+  lio.observe(box);
+  document.querySelectorAll(".ranges button").forEach(b => b.addEventListener("click", () => {
+    document.querySelectorAll(".ranges button").forEach(x => x.setAttribute("aria-pressed", x === b));
+    buildAssets(b.dataset.r);
+  }));
+
+  /* video */
+  const modal = $("#modal"), vf = $("#vframe");
+  const openV = () => { vf.src = "video.html"; modal.classList.add("open"); };
+  const closeV = () => { modal.classList.remove("open"); setTimeout(() => { vf.src = "about:blank"; }, 400); };
+  $("#openVideo").addEventListener("click", openV);
+  $("#closeVideo").addEventListener("click", closeV);
+  modal.addEventListener("click", e => { if (e.target === modal) closeV(); });
+  addEventListener("keydown", e => { if (e.key === "Escape" && modal.classList.contains("open")) closeV(); });
+
+  /* formulario → correo */
+  $("#form").addEventListener("submit", e => {
+    e.preventDefault(); const f = e.target, ok = $("#ok");
+    if (!f.nombre.value.trim() || !f.email.checkValidity() || !f.email.value) { ok.textContent = "Indica tu nombre y un email válido."; return; }
+    if (f.idea.value.trim().length < 20) { ok.textContent = "Cuéntanos un poco más de tu idea."; return; }
+    const body = `Nombre: ${f.nombre.value}\nEmail: ${f.email.value}\nPaís: ${f.pais.value}\nSector: ${f.sector.value}\n\nIdea:\n${f.idea.value}`;
+    location.href = `mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent("Idea de negocio · S&T Capital Group")}&body=${encodeURIComponent(body)}`;
+    ok.textContent = "Gracias. Te responderemos en breve.";
+  });
+})();
+</script>
+</body>
+</html>

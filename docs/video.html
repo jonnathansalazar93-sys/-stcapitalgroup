@@ -1,0 +1,676 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>S&amp;T Capital Group — Video</title>
+<link rel="icon" href="assets/logo-st.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;600;800&display=swap" rel="stylesheet">
+<style>
+  :root { --bg: #000; --text: #e9eaec; --muted: #6d717a; --red: #d7141a; }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; background: var(--bg); color: var(--text); font-family: "Montserrat", sans-serif; overflow: hidden; }
+  .stage { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; }
+  canvas { width: min(100vw, calc(100vh * 16 / 9)); aspect-ratio: 16 / 9; display: block; background: var(--bg); }
+  body.vertical canvas { width: min(100vw, calc(100vh * 9 / 16)); aspect-ratio: 9 / 16; }
+  .progress { position: fixed; left: 0; bottom: 0; height: 2px; background: var(--red); width: 0; z-index: 3; }
+
+  .overlay {
+    position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 28px; background: color-mix(in srgb, var(--bg) 82%, transparent); z-index: 4; transition: opacity .6s;
+  }
+  .overlay.hide { opacity: 0; pointer-events: none; }
+  .overlay img { width: min(360px, 70vw); opacity: .9; }
+  .play {
+    background: none; border: 1px solid #3a3d44; color: var(--text); border-radius: 999px;
+    padding: 16px 34px; font: 500 .8rem "Montserrat", sans-serif; letter-spacing: .3em; text-transform: uppercase;
+    cursor: pointer; transition: border-color .3s, background .3s;
+  }
+  .play:hover { border-color: var(--red); background: color-mix(in srgb, var(--red) 14%, transparent); }
+  .hint { color: var(--muted); font-size: .65rem; letter-spacing: .3em; text-transform: uppercase; margin: 0; }
+  .row { display: flex; gap: 14px; flex-wrap: wrap; justify-content: center; }
+
+  .controls {
+    position: fixed; right: 20px; bottom: 18px; display: flex; gap: 8px; z-index: 3;
+    opacity: 0; transition: opacity .4s;
+  }
+  body.ui .controls { opacity: 1; }
+  .controls button {
+    background: rgba(10,10,12,.7); border: 1px solid #2a2c31; color: var(--muted); border-radius: 999px;
+    padding: 8px 14px; font: 500 .62rem "Montserrat", sans-serif; letter-spacing: .22em; text-transform: uppercase; cursor: pointer;
+  }
+  .controls button:hover { color: var(--text); border-color: #555; }
+  .rec { position: fixed; left: 20px; top: 18px; z-index: 3; font-size: .62rem; letter-spacing: .3em; color: var(--red); display: none; align-items: center; gap: 8px; }
+  .rec::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--red); animation: blink 1s infinite; }
+  body.recording .rec { display: flex; }
+  body.recording .controls { display: none; }
+  @keyframes blink { 50% { opacity: .2; } }
+</style>
+</head>
+<body>
+<div class="stage"><canvas id="c" width="1920" height="1080"></canvas></div>
+<div class="progress" id="progress"></div>
+<div class="rec">GRABANDO — NO CIERRES ESTA PESTAÑA</div>
+
+<div class="overlay" id="start">
+  <img src="assets/logo-st.png" alt="S&amp;T Capital Group">
+  <button class="play" id="playBtn" type="button">▶ Ver el video</button>
+  <p class="hint" id="hint">Con sonido · pantalla completa recomendada</p>
+</div>
+
+<!-- controles discretos: aparecen al mover el ratón; las descargas graban el video en tiempo real (~55 s) -->
+<div class="controls">
+  <button id="restartBtn" type="button">↺ Reiniciar</button>
+  <button id="muteBtn" type="button">Sonido: sí</button>
+  <button id="fsBtn" type="button">Pantalla completa</button>
+  <button id="dlH" type="button">⬇ Horizontal</button>
+  <button id="dlV" type="button">⬇ Vertical</button>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+//  S&T CAPITAL GROUP — tráiler (lienzo 1920×1080 + audio sintetizado)
+// ═══════════════════════════════════════════════════════════════
+const canvas = document.getElementById("c");
+const ctx = canvas.getContext("2d");
+// Formato: horizontal 1920×1080 (con franjas de cine) o vertical 1080×1920
+let W = 1920, H = 1080, BAR = 131, V = false;
+const DURATION = 52;
+// ─── TEMAS: ?tema=suave para la versión de colores suaves ───
+const THEMES = {
+  intensa: {
+    bg: "#1f2023", bgRGB: "31,32,35", accent: "#d7141a", aRGB: "215,20,26",
+    text: "#e9eaec", tRGB: "233,234,236", grey: "#8a8f98", dim: "#5b5f67", lRGB: "140,144,152",
+    bld: "#26272b", bldLine: "#36383d", flash: .22, glow: 1, grain: .06, vignette: .45, bars: "#18191b", logoTint: null
+  },
+  suave: {
+    bg: "#2a2b2f", bgRGB: "42,43,47", accent: "#c2a77d", aRGB: "194,167,125",
+    text: "#e4dfd6", tRGB: "228,223,214", grey: "#9a968f", dim: "#75726c", lRGB: "160,155,146",
+    bld: "#313236", bldLine: "#424449", flash: 0, glow: .35, grain: .035, vignette: .3, bars: "#222326", logoTint: [194, 167, 125]
+  }
+};
+const TEMA = new URLSearchParams(location.search).get("tema") === "suave" ? "suave" : "intensa";
+const TH = THEMES[TEMA];
+const RED = TH.accent, WHITE = TH.text, GREY = TH.grey, DIM = TH.dim;
+const fs = px => Math.round(px * (V ? 1.7 : 1.2));   // textos pequeños legibles en el móvil
+document.documentElement.style.setProperty("--red", TH.accent);
+document.documentElement.style.setProperty("--text", TH.text);
+document.documentElement.style.setProperty("--bg", TH.bars);
+
+let logo = new Image();
+logo.src = "assets/logo-st.png";
+if (TH.logoTint) logo.onload = () => {
+  const c = document.createElement("canvas"); c.width = logo.naturalWidth; c.height = logo.naturalHeight;
+  const x = c.getContext("2d"); x.drawImage(logo, 0, 0);
+  const img = x.getImageData(0, 0, c.width, c.height), d = img.data, [tr, tg, tb] = TH.logoTint;
+  for (let i = 0; i < d.length; i += 4) {
+    if (d[i] > d[i + 1] + 50 && d[i] > d[i + 2] + 50) { d[i] = tr; d[i + 1] = tg; d[i + 2] = tb; }
+    else { d[i] = Math.min(255, d[i] * .97 + 4); d[i + 2] = d[i + 2] * .93; }   // blanco un poco cálido
+  }
+  x.putImageData(img, 0, 0);
+  const tinted = new Image(); tinted.src = c.toDataURL();
+  tinted.onload = () => { logo = tinted; document.querySelectorAll(".overlay img").forEach(el => el.src = tinted.src); };
+};
+
+// ─── utilidades ───
+const clamp = (v, a = 0, b = 1) => Math.max(a, Math.min(b, v));
+const easeOut = x => 1 - Math.pow(1 - x, 3);
+const easeInOut = x => x < .5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2;
+const env = (lt, len, fi = .4, fo = .5) => Math.min(clamp(lt / fi), clamp((len - lt) / fo));
+function rng(seed) { return () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+const hash = (a, b, c) => { const s = Math.sin(a * 127.1 + b * 311.7 + c * 74.7) * 43758.5453; return s - Math.floor(s); };
+
+// Texto que aparece letra a letra, centrado en (cx, cy)
+function reveal(text, cx, cy, o) {
+  const { size = 60, weight = 600, color = WHITE, spacing = 0, lt = 1, stagger = .03, dur = .5, alpha = 1, rise = 22, maxW = W * .88 } = o;
+  let s = size;
+  const chars = [...text];
+  let widths, total;
+  const measure = () => {
+    ctx.font = `${weight} ${s}px Montserrat`;
+    widths = chars.map(c => ctx.measureText(c).width);
+    total = widths.reduce((a, b) => a + b, 0) + spacing * (s / size) * (chars.length - 1);
+  };
+  measure();
+  if (total > maxW) { s = s * maxW / total; measure(); }
+  const sp = spacing * (s / size);
+  let x = cx - total / 2;
+  ctx.textBaseline = "middle"; ctx.textAlign = "left"; ctx.fillStyle = color;
+  chars.forEach((c, i) => {
+    const a = easeOut(clamp((lt - i * stagger) / dur));
+    if (a > 0) { ctx.globalAlpha = alpha * a; ctx.fillText(c, x, cy + (1 - a) * rise); }
+    x += widths[i] + sp;
+  });
+  ctx.globalAlpha = 1;
+  return total;
+}
+
+// Varias líneas centradas; cada línea empieza un poco después de la anterior
+function revealLines(lines, cx, cy, lineH, o) {
+  let w = 0;
+  lines.forEach((ln, i) => {
+    w = reveal(ln, cx, cy + (i - (lines.length - 1) / 2) * lineH, { ...o, lt: (o.lt ?? 1) - i * (o.lineDelay ?? .25) });
+  });
+  return w;
+}
+// Fila de palabras separadas por puntos rojos; en vertical se parte en filas de `perRow`
+function dotRow(items, cy, o) {
+  const { size = 17, weight = 400, sp = 6, gap = 40, color = () => DIM, wt = () => weight, alpha = () => 1, perRow = items.length, rowH = size * 2.2 } = o;
+  const rows = [];
+  for (let i = 0; i < items.length; i += perRow) rows.push(items.slice(i, i + perRow).map((s, j) => ({ s, i: i + j })));
+  rows.forEach((row, r) => {
+    const y = cy + (r - (rows.length - 1) / 2) * rowH;
+    ctx.font = `${weight} ${size}px Montserrat`;
+    const wOf = s => [...s].reduce((a, c) => a + ctx.measureText(c).width + sp, -sp);
+    const total = row.reduce((a, it) => a + wOf(it.s), 0) + gap * (row.length - 1);
+    let x = W / 2 - total / 2;
+    row.forEach((it, j) => {
+      const ia = alpha(it.i);
+      if (j) { ctx.globalAlpha = ia; ctx.fillStyle = RED; ctx.beginPath(); ctx.arc(x - gap / 2, y, size / 7, 0, Math.PI * 2); ctx.fill(); ctx.globalAlpha = 1; }
+      ctx.font = `${weight} ${size}px Montserrat`;
+      const w = wOf(it.s);
+      reveal(it.s, x + w / 2, y, { size, weight: wt(it.i), color: color(it.i), spacing: sp, lt: 9, alpha: ia, maxW: 99999 });
+      x += w + gap;
+    });
+  });
+}
+
+// ─── grano ───
+const grainTiles = [0, 1, 2, 3].map(k => {
+  const g = document.createElement("canvas"); g.width = g.height = 256;
+  const gx = g.getContext("2d"), img = gx.createImageData(256, 256), r = rng(k + 7);
+  for (let i = 0; i < img.data.length; i += 4) { const v = r() * 255; img.data[i] = img.data[i + 1] = img.data[i + 2] = v; img.data[i + 3] = 255; }
+  gx.putImageData(img, 0, 0);
+  return ctx.createPattern(g, "repeat");
+});
+
+// ─── datos fijos de las escenas ───
+let R = rng(42), streaks, buildings;
+function buildScenery() {
+  R = rng(42);
+  streaks = Array.from({ length: V ? 90 : 60 }, () => ({ y: BAR + 40 + R() * (H - 2 * BAR - 80), len: 80 + R() * 380, speed: .35 + R() * 1.1, phase: R() * 3000, red: R() < .18, a: .1 + R() * .35 }));
+  buildings = (() => { const out = []; let x = -20; while (x < W) { const w = 70 + R() * 110; out.push({ x, w, h: (160 + R() * 420) * (V ? 1.5 : 1) }); x += w + 10; } return out; })();
+}
+// En vertical, al verlo en pantalla, el alto se ajusta a la forma del móvil (los móviles
+// actuales son más alargados que 9:16) para llenar toda la pantalla. Al grabar se usa 1080×1920.
+function setFormat(vertical, forRecording) {
+  V = vertical; W = V ? 1080 : 1920; BAR = V ? 0 : 131;
+  const screenRatio = clamp(innerHeight / innerWidth, 16 / 9, 2.3);
+  H = V ? (forRecording ? 1920 : Math.round(1080 * screenRatio)) : 1080;
+  canvas.width = W; canvas.height = H;
+  canvas.style.aspectRatio = `${W} / ${H}`;
+  canvas.style.width = `min(100vw, calc(100vh * ${W} / ${H}))`;
+  document.body.classList.toggle("vertical", V);
+  buildScenery();
+}
+const portrait = () => window.matchMedia("(orientation: portrait)").matches;
+// ?formato=vertical o ?formato=horizontal fuerza el formato
+const forcedParam = new URLSearchParams(location.search).get("formato");
+const forcedV = forcedParam ? forcedParam === "vertical" : null;
+const candles = (() => {
+  const out = []; let v = 0;
+  for (let i = 0; i < 140; i++) {
+    const o = v, c = v + (R() - .4) * 26, hi = Math.max(o, c) + R() * 14, lo = Math.min(o, c) - R() * 14;
+    out.push({ o, c, hi, lo }); v = c;
+  }
+  return out;
+})();
+const towerSegs = (() => {
+  const segs = [];
+  const box = (ox, oy, w, d, z0, z1) => {
+    const c = [[ox, oy], [ox + w, oy], [ox + w, oy + d], [ox, oy + d]];
+    for (let i = 0; i < 4; i++) segs.push([[...c[i], z0], [...c[i], z1]]);
+    for (let i = 0; i < 4; i++) segs.push([[...c[i], z1], [...c[(i + 1) % 4], z1]]);
+  };
+  for (let L = 0; L < 6; L++) box(0, 0, 2, 2, L * .8, (L + 1) * .8);
+  for (let L = 0; L < 4; L++) box(2.6, .4, 1.4, 1.4, L * .8, (L + 1) * .8);
+  return segs;
+})();
+
+// ─── visuales de cada sector ───
+function vMovilidad(lt) {
+  const vx = W / 2, vy = H * .46;
+  ctx.strokeStyle = `rgba(${TH.lRGB},.45)`; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(vx - 6, vy); ctx.lineTo(W * .08, H); ctx.moveTo(vx + 6, vy); ctx.lineTo(W * .92, H); ctx.stroke();
+  for (let k = 0; k < 16; k++) {
+    const z0 = ((k / 16) + lt * .55) % 1, z1 = Math.min(1, z0 + .03);
+    const y0 = vy + (H - vy) * z0 * z0, y1 = vy + (H - vy) * z1 * z1;
+    const w0 = 1 + z0 * 16, w1 = 1 + z1 * 16;
+    ctx.fillStyle = `rgba(${TH.tRGB},${.25 + z0 * .6})`;
+    ctx.beginPath(); ctx.moveTo(vx - w0, y0); ctx.lineTo(vx + w0, y0); ctx.lineTo(vx + w1, y1); ctx.lineTo(vx - w1, y1); ctx.fill();
+  }
+  streaks.forEach(s => {
+    const x = W - ((s.phase + lt * s.speed * W) % (W + s.len));
+    const g = ctx.createLinearGradient(x, 0, x + s.len, 0);
+    const col = s.red ? TH.aRGB : TH.tRGB;
+    g.addColorStop(0, `rgba(${col},${s.a})`); g.addColorStop(1, `rgba(${col},0)`);
+    ctx.fillStyle = g; ctx.fillRect(x, s.y, s.len, s.red ? 2 : 1.5);
+  });
+}
+function vInmobiliario(lt) {
+  const ground = H - BAR;
+  buildings.forEach((b, i) => {
+    const rise = easeOut(clamp((lt - i * .025) / .9));
+    const top = ground - b.h * rise;
+    ctx.fillStyle = TH.bld; ctx.fillRect(b.x, top, b.w, ground - top);
+    ctx.strokeStyle = TH.bldLine; ctx.lineWidth = 1.5; ctx.strokeRect(b.x + .5, top + .5, b.w - 1, ground - top);
+    const cols = Math.floor((b.w - 14) / 20), rows = Math.floor(b.h * rise / 30);
+    const lit = clamp((lt - .5) / 1.8) * .55;
+    for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
+      const h = hash(i, r, c);
+      if (h < lit) {
+        ctx.fillStyle = hash(c, i, r) < .06 ? `rgba(${TH.aRGB},.85)` : `rgba(${TH.tRGB},${.25 + hash(r, c, i) * .45})`;
+        ctx.fillRect(b.x + 9 + c * 20, top + 14 + r * 30, 8, 13);
+      }
+    }
+  });
+}
+function vConstruccion(lt) {
+  ctx.strokeStyle = `rgba(${TH.lRGB},.08)`; ctx.lineWidth = 1;
+  for (let x = 0; x < W; x += 60) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke(); }
+  for (let y = 0; y < H; y += 60) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
+  const iso = (ox, oy, s) => p => [ox + (p[0] - p[1]) * .866 * s, oy + (p[0] + p[1]) * .5 * s - p[2] * s];
+  (V ? [[W * .22, H - 260, 80], [W * .74, H - 260, 80]] : [[W * .17, H - BAR - 60, 95], [W * .83, H - BAR - 60, 95]]).forEach(([ox, oy, s], ti) => {
+    const P = iso(ox, oy, s);
+    const prog = clamp((lt - ti * .25) / 2.3) * towerSegs.length;
+    towerSegs.forEach((seg, i) => {
+      if (i > prog) return;
+      const f = clamp(prog - i);
+      const a = P(seg[0]), b = P(seg[1]);
+      ctx.strokeStyle = f < 1 ? RED : `rgba(${TH.lRGB},.6)`; ctx.lineWidth = f < 1 ? 3 : 2;
+      ctx.beginPath(); ctx.moveTo(a[0], a[1]); ctx.lineTo(a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f); ctx.stroke();
+    });
+  });
+}
+function vModa(lt) {
+  for (let i = 0; i < 20; i++) {
+    const isRed = i === 10;
+    ctx.strokeStyle = isRed ? `rgba(${TH.aRGB},.8)` : `rgba(${TH.tRGB},${.08 + (1 - Math.abs(i - 10) / 10) * .22})`;
+    ctx.lineWidth = isRed ? 3 : 1.5;
+    ctx.beginPath();
+    for (let x = -20; x <= W + 20; x += 16) {
+      const amp = 70 * Math.sin(lt * .7 + i * .12 + 1);
+      const y = H / 2 + (i - 10) * (V ? 52 : 26) + Math.sin(x * .0032 + lt * 1.6 + i * .22) * amp + Math.sin(x * .011 - lt * 2 + i) * 8;
+      x < 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+  }
+}
+
+function vMercados(lt) {
+  const cw = 30, scroll = lt * 70, top = V ? H * .7 : BAR + 60, bottom = H - BAR - 110;
+  const min = Math.min(...candles.map(k => k.lo)), max = Math.max(...candles.map(k => k.hi));
+  const Y = v => bottom - (v - min) / (max - min) * (bottom - top);
+  ctx.strokeStyle = `rgba(${TH.lRGB},.08)`; ctx.lineWidth = 1;
+  for (let i = 0; i <= 6; i++) { const y = top + i * (bottom - top) / 6; ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
+  const visible = Math.min(candles.length, Math.floor(8 + lt * 22));
+  for (let i = 0; i < visible; i++) {
+    const k = candles[i], x = 40 + i * cw - scroll;
+    if (x < -cw || x > W + cw) continue;
+    const up = k.c >= k.o;
+    ctx.strokeStyle = ctx.fillStyle = up ? `rgba(${TH.tRGB},.55)` : `rgba(${TH.aRGB},.75)`;
+    ctx.beginPath(); ctx.moveTo(x + 9, Y(k.hi)); ctx.lineTo(x + 9, Y(k.lo)); ctx.stroke();
+    const y0 = Y(Math.max(k.o, k.c)), y1 = Y(Math.min(k.o, k.c));
+    ctx.fillRect(x + 2, y0, 14, Math.max(2, y1 - y0));
+  }
+  // cinta de cotizaciones (sin cifras)
+  const tape = "ETF \u25B2   BONOS \u25B2   BTC \u25B2   ETH \u25B2   IA \u25B2   S&P 500 \u25B2   NASDAQ \u25B2   ";
+  ctx.font = `600 ${fs(18)}px Montserrat`; ctx.textBaseline = "middle"; ctx.textAlign = "left";
+  const tw = ctx.measureText(tape).width, y = H - BAR - 45;
+  ctx.fillStyle = `rgba(${TH.bgRGB},.92)`; ctx.fillRect(0, y - 22, W, 44);
+  ctx.fillStyle = `rgba(${TH.tRGB},.45)`;
+  for (let x = -((lt * 160) % tw); x < W; x += tw) ctx.fillText(tape, x, y);
+}
+
+const SECTORS = [
+  { word: "MOVILIDAD", sub: "EN MARCHA, 24/7", v: vMovilidad },
+  { word: "INMOBILIARIO", sub: "ESPACIOS QUE RINDEN", v: vInmobiliario },
+  { word: "CONSTRUCCIÓN", sub: "DEL PLANO A LA LLAVE", v: vConstruccion },
+  { word: "MODA", sub: "IDENTIDAD PROPIA", v: vModa },
+];
+
+// ─── escenas (t = segundos desde el inicio) ───
+function scene(t) {
+  ctx.fillStyle = TH.bg; ctx.fillRect(0, 0, W, H);
+
+  // 1 · la línea roja (0–5)
+  if (t < 5) {
+    const lt = t, a = env(lt, 5, .1, .8);
+    const h = easeInOut(clamp((lt - .6) / 2.2)) * 360;
+    ctx.save(); ctx.globalAlpha = a; ctx.shadowColor = RED; ctx.shadowBlur = 40 * TH.glow;
+    ctx.fillStyle = RED; ctx.fillRect(W / 2 - 3, H / 2 - h / 2, 6, h); ctx.restore();
+    reveal("UN GRUPO PRIVADO", W / 2, H / 2 + 240, { size: fs(20), weight: 400, color: GREY, spacing: 16, lt: lt - 2.6, alpha: a, stagger: .05, dur: .7 });
+  }
+
+  // 2 · anuncio vs crecimiento (5–11)
+  if (t >= 5 && t < 11) {
+    const lt = t - 5;
+    if (lt < 3) {
+      const o = { size: V ? 84 : 66, weight: 300, color: GREY, lt, alpha: env(lt, 3, .2, .5), stagger: .035, dur: .6 };
+      V ? revealLines(["Hay empresas", "que se anuncian."], W / 2, H / 2, 110, o) : reveal("Hay empresas que se anuncian.", W / 2, H / 2, o);
+    } else {
+      const l2 = lt - 3, a = env(l2, 3, .1, .5);
+      const o = { size: V ? 104 : 76, weight: 600, color: WHITE, lt: l2, alpha: a, stagger: .03, dur: .5 };
+      const w = V ? revealLines(["Otras,", "simplemente", "crecen."], W / 2, H / 2, 130, o) : reveal("Otras, simplemente crecen.", W / 2, H / 2, o);
+      const u = easeInOut(clamp((l2 - .9) / .8));
+      const uy = V ? H / 2 + 130 + 80 : H / 2 + 62;
+      ctx.globalAlpha = a; ctx.fillStyle = RED; ctx.fillRect(W / 2 - w / 2, uy, w * u, V ? 6 : 4); ctx.globalAlpha = 1;
+    }
+  }
+
+  // 3 · los cuatro sectores (11–23)
+  if (t >= 11 && t < 23) {
+    const idx = Math.floor((t - 11) / 3), lt = (t - 11) % 3, s = SECTORS[idx];
+    const a = env(lt, 3, .12, .35);
+    ctx.save(); ctx.globalAlpha = a * .9; s.v(lt); ctx.restore();
+    // oscurece el centro para que el texto respire
+    const g = ctx.createRadialGradient(W / 2, H / 2, 50, W / 2, H / 2, 760);
+    g.addColorStop(0, `rgba(${TH.bgRGB},.82)`); g.addColorStop(1, `rgba(${TH.bgRGB},0)`);
+    ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+    ctx.save();
+    const z = 1 + lt * .018; ctx.translate(W / 2, H / 2); ctx.scale(z, z); ctx.translate(-W / 2, -H / 2);
+    reveal("0" + (idx + 1), W / 2, H / 2 - (V ? 140 : 125), { size: fs(28), weight: 600, color: RED, spacing: 10, lt: lt - .05, alpha: a });
+    reveal(s.word, W / 2, H / 2 + 5, { size: V ? 140 : 156, weight: 800, color: WHITE, spacing: 16, lt: lt - .1, alpha: a, stagger: .035, dur: .4, rise: 40 });
+    reveal(s.sub, W / 2, H / 2 + (V ? 140 : 125), { size: fs(20), weight: 400, color: GREY, spacing: 12, lt: lt - .7, alpha: a, stagger: .02 });
+    ctx.restore();
+    if (lt < .2) { ctx.fillStyle = `rgba(${TH.aRGB},${(.2 - lt) / .2 * TH.flash})`; ctx.fillRect(0, 0, W, H); }
+  }
+
+  // 3b · inversión (23–31)
+  if (t >= 23 && t < 25) {
+    const lt = t - 23;
+    const o = { size: V ? 84 : 62, weight: 300, color: GREY, lt, alpha: env(lt, 2, .15, .35), stagger: .03, dur: .5, lineDelay: .2 };
+    V ? revealLines(["Y el capital", "no se queda quieto."], W / 2, H / 2, 110, o) : reveal("Y el capital no se queda quieto.", W / 2, H / 2, o);
+  }
+  if (t >= 25 && t < 31) {
+    const lt = t - 25, a = env(lt, 6, .12, .5);
+    ctx.save(); ctx.globalAlpha = a * .9; vMercados(lt); ctx.restore();
+    const g = ctx.createRadialGradient(W / 2, H / 2, 50, W / 2, H / 2, 800);
+    g.addColorStop(0, `rgba(${TH.bgRGB},.88)`); g.addColorStop(1, `rgba(${TH.bgRGB},0)`);
+    ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+    ctx.save();
+    const z = 1 + lt * .012; ctx.translate(W / 2, H / 2); ctx.scale(z, z); ctx.translate(-W / 2, -H / 2);
+    reveal("CAPITAL", W / 2, H / 2 - (V ? 120 : 130), { size: fs(24), weight: 600, color: RED, spacing: 14, lt: lt - .05, alpha: a });
+    reveal("INVERSIÓN", W / 2, H / 2 - 10, { size: 156, weight: 800, color: WHITE, spacing: 16, lt: lt - .1, alpha: a, stagger: .035, dur: .4, rise: 40 });
+    // ETFs · BONOS · CRIPTO · INTELIGENCIA ARTIFICIAL, uno por golpe
+    const items = ["ETFs", "BONOS", "CRIPTO", "INTELIGENCIA ARTIFICIAL"];
+    const itemAlpha = i => easeOut(clamp((lt - 1.2 - i) / .45)) * a;
+    if (V) {
+      // en vertical, una debajo de otra
+      items.forEach((s, i) => reveal(s, W / 2, H / 2 + 150 + i * 78, { size: 44, weight: 600, color: i === 3 ? RED : WHITE, spacing: 10, lt: 9, alpha: itemAlpha(i) }));
+    } else {
+      dotRow(items, H / 2 + 120, { size: 30, weight: 600, sp: 8, gap: 56, color: i => i === 3 ? RED : WHITE, alpha: itemAlpha });
+    }
+    ctx.restore();
+    if (lt < .2) { ctx.fillStyle = `rgba(${TH.aRGB},${(.2 - lt) / .2 * TH.flash})`; ctx.fillRect(0, 0, W, H); }
+  }
+
+  // 4 · cuatro empresas, un portafolio, una obsesión (31–37.4)
+  if (t >= 31 && t < 37.4) {
+    const lt = t - 31;
+    if (lt < 2.8) {
+      const o = { size: V ? 90 : 76, weight: 300, color: WHITE, lt, alpha: env(lt, 2.8, .2, .5), stagger: .04, dur: .6, lineDelay: .5 };
+      V ? revealLines(["Cuatro empresas.", "Un portafolio."], W / 2, H / 2, 120, o) : reveal("Cuatro empresas. Un portafolio.", W / 2, H / 2, o);
+    }
+    else {
+      const l2 = lt - 2.8, a = env(l2, 3.6, .2, .25);
+      reveal("Una misma obsesión:", W / 2, H / 2 - (V ? 110 : 80), { size: V ? 56 : 42, weight: 300, color: GREY, lt: l2, alpha: a, stagger: .03 });
+      ctx.save(); const z = 1 + l2 * .03; ctx.translate(W / 2, H / 2 + 50); ctx.scale(z, z); ctx.translate(-W / 2, -(H / 2 + 50));
+      reveal("CRECER.", W / 2, H / 2 + 50, { size: 170, weight: 800, color: WHITE, spacing: 20, lt: l2 - .9, alpha: a, stagger: .07, dur: .5, rise: 50 });
+      ctx.restore();
+    }
+  }
+
+  // 5 · la quinta (37.4–43.4)
+  if (t >= 37.4 && t < 43.4) {
+    const lt = t - 37.4, a = env(lt, 6, .05, .6);
+    const x0 = V ? 90 : 160, x1 = W - (V ? 90 : 160), yb = H - BAR - (V ? 160 : 70), hgt = V ? 1300 : 560, k = 3.2;
+    const f = x => (Math.exp(k * x) - 1) / (Math.exp(k) - 1);
+    const prog = easeInOut(clamp(lt / 2.6));
+    ctx.save(); ctx.globalAlpha = a * .75;
+    ctx.strokeStyle = `rgba(${TH.lRGB},.15)`; ctx.lineWidth = 1;
+    for (let i = 0; i <= 4; i++) { const y = yb - i * hgt / 4; ctx.beginPath(); ctx.moveTo(x0, y); ctx.lineTo(x1, y); ctx.stroke(); }
+    ctx.strokeStyle = WHITE; ctx.lineWidth = 3; ctx.shadowColor = `rgba(${TH.tRGB},.5)`; ctx.shadowBlur = 12 * TH.glow;
+    ctx.beginPath();
+    for (let i = 0; i <= 200 * prog; i++) { const u = i / 200; const x = x0 + (x1 - x0) * u, y = yb - f(u) * hgt; i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); }
+    ctx.stroke(); ctx.shadowBlur = 0;
+    [.2, .4, .6, .8, 1].forEach((u, i) => {
+      if (prog < u) return;
+      const x = x0 + (x1 - x0) * u, y = yb - f(u) * hgt, last = i === 4;
+      ctx.fillStyle = last ? RED : WHITE;
+      ctx.beginPath(); ctx.arc(x, y, last ? 10 + Math.sin(lt * 6) * 3 : 6, 0, Math.PI * 2); ctx.fill();
+      if (last) { ctx.strokeStyle = `rgba(${TH.aRGB},${.6 - (lt * 1.2 % 1) * .6})`; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(x, y, 10 + (lt * 1.2 % 1) * 40, 0, Math.PI * 2); ctx.stroke(); }
+      ctx.font = `600 ${fs(18)}px Montserrat`; ctx.textAlign = "center"; ctx.fillStyle = last ? RED : GREY;
+      ctx.fillText("0" + (i + 1), x, y + fs(18) + 18);
+    });
+    ctx.restore();
+    // oscurece el centro para que el "05" y la frase se lean limpios
+    const cg = ctx.createRadialGradient(W / 2, H / 2 + 20, 40, W / 2, H / 2 + 20, V ? 560 : 620);
+    cg.addColorStop(0, `rgba(${TH.bgRGB},.9)`); cg.addColorStop(.6, `rgba(${TH.bgRGB},.55)`); cg.addColorStop(1, `rgba(${TH.bgRGB},0)`);
+    ctx.fillStyle = cg; ctx.fillRect(0, 0, W, H);
+    // "05" gigante con glitch
+    const g = clamp((lt - .4) / .5);
+    if (g > 0) {
+      const sc = 1.35 - .35 * easeOut(g);
+      ctx.save(); ctx.globalAlpha = a * g; ctx.translate(W / 2, H / 2 - 70); ctx.scale(sc, sc);
+      ctx.font = "800 300px Montserrat"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      if (lt < 1.1) { const j = (1.1 - lt) * 18; ctx.fillStyle = `rgba(${TH.tRGB},.5)`; ctx.fillText("05", (Math.random() - .5) * j, (Math.random() - .5) * j * .4); }
+      ctx.shadowColor = RED; ctx.shadowBlur = 50 * TH.glow; ctx.fillStyle = RED; ctx.fillText("05", 0, 0);
+      ctx.restore();
+    }
+    const qo = { size: V ? 46 : 34, weight: 600, color: WHITE, spacing: 12, lt: lt - 1.5, alpha: a, stagger: .03 };
+    V ? revealLines(["LA QUINTA", "YA ESTÁ EN CAMINO."], W / 2, H / 2 + 170, 70, qo) : reveal("LA QUINTA YA ESTÁ EN CAMINO.", W / 2, H / 2 + 140, qo);
+  }
+
+  // 6 · cierre (43.4–52)
+  if (t >= 43.4) {
+    const lt = t - 43.4, out = clamp((DURATION - .2 - t) / 1.4);
+    const la = easeOut(clamp(lt / 2.4));
+    if (logo.complete && logo.naturalWidth) {
+      const lw = V ? 860 : 800, lh = lw * logo.naturalHeight / logo.naturalWidth;
+      ctx.save(); ctx.globalAlpha = la * .95 * out; ctx.filter = `blur(${(1 - la) * 18}px)`;
+      ctx.drawImage(logo, W / 2 - lw / 2, H / 2 - 70 - lh / 2, lw, lh); ctx.restore();
+    }
+    reveal("CONSTRUIMOS EN SILENCIO.", W / 2, H / 2 + (V ? 140 : 115), { size: fs(24), weight: 400, color: GREY, spacing: 13, lt: lt - 2.4, alpha: out, stagger: .045, dur: .7 });
+    // fila de sectores + "+1"
+    const items = ["MOVILIDAD", "INMOBILIARIO", "CONSTRUCCIÓN", "MODA", "INVERSIÓN", "+1"];
+    dotRow(items, H / 2 + (V ? 270 : 185), {
+      size: fs(17), sp: 6, gap: V ? 44 : 40, perRow: V ? 3 : 6, rowH: fs(17) * 2.2,
+      color: i => i === 5 ? RED : DIM, wt: i => i === 5 ? 600 : 400,
+      alpha: i => easeOut(clamp((lt - 4.2 - i * .35) / .8)) * out
+    });
+  }
+
+  // viñeta
+  const v = ctx.createRadialGradient(W / 2, H / 2, Math.min(W, H) * .35, W / 2, H / 2, Math.max(W, H) * .62);
+  v.addColorStop(0, "rgba(0,0,0,0)"); v.addColorStop(1, `rgba(0,0,0,${TH.vignette})`);
+  ctx.fillStyle = v; ctx.fillRect(0, 0, W, H);
+  // grano
+  ctx.save(); ctx.globalAlpha = TH.grain; ctx.globalCompositeOperation = "overlay";
+  ctx.fillStyle = grainTiles[Math.floor(t * 24) % 4];
+  ctx.translate((t * 977) % 256, (t * 613) % 256); ctx.fillRect(-256, -256, W + 512, H + 512); ctx.restore();
+  // franjas de cine
+  const bh = BAR * easeInOut(clamp(t / 1.6));
+  ctx.fillStyle = TH.bars; ctx.fillRect(0, 0, W, bh); ctx.fillRect(0, H - bh, W, bh);
+}
+
+// ─── audio sintetizado ───
+let actx, master, speakers, recDest, noiseBuf, t0 = 0, muted = false;
+function setupAudio() {
+  actx = new (window.AudioContext || window.webkitAudioContext)();
+  master = actx.createGain(); master.gain.value = .9;
+  const comp = actx.createDynamicsCompressor(); comp.threshold.value = -14; comp.ratio.value = 4;
+  speakers = actx.createGain(); speakers.gain.value = muted ? 0 : 1;
+  master.connect(comp); comp.connect(speakers); speakers.connect(actx.destination);
+  recDest = actx.createMediaStreamDestination(); comp.connect(recDest);
+  noiseBuf = actx.createBuffer(1, actx.sampleRate * 3, actx.sampleRate);
+  const d = noiseBuf.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+}
+let voices = [];
+function track(n) { voices.push(n); return n; }
+function stopAudio() { voices.forEach(n => { try { n.stop(); } catch {} }); voices = []; }
+function kick(at, vol) {
+  const o = track(actx.createOscillator()), g = actx.createGain();
+  o.frequency.setValueAtTime(150, at); o.frequency.exponentialRampToValueAtTime(40, at + .3);
+  g.gain.setValueAtTime(.0001, at); g.gain.exponentialRampToValueAtTime(vol, at + .005); g.gain.exponentialRampToValueAtTime(.0001, at + .45);
+  o.connect(g).connect(master); o.start(at); o.stop(at + .5);
+}
+function impact(at, vol) {
+  const o = track(actx.createOscillator()), g = actx.createGain();
+  o.frequency.setValueAtTime(70, at); o.frequency.exponentialRampToValueAtTime(28, at + 2);
+  g.gain.setValueAtTime(vol, at); g.gain.exponentialRampToValueAtTime(.0001, at + 2.6);
+  o.connect(g).connect(master); o.start(at); o.stop(at + 2.7);
+  const n = track(actx.createBufferSource()), lp = actx.createBiquadFilter(), ng = actx.createGain();
+  n.buffer = noiseBuf; lp.type = "lowpass"; lp.frequency.setValueAtTime(1400, at); lp.frequency.exponentialRampToValueAtTime(120, at + 1.2);
+  ng.gain.setValueAtTime(vol * .55, at); ng.gain.exponentialRampToValueAtTime(.0001, at + 1.4);
+  n.connect(lp).connect(ng).connect(master); n.start(at); n.stop(at + 1.5);
+}
+function blip(at, vol, f) {
+  const o = track(actx.createOscillator()), g = actx.createGain(); o.type = "triangle";
+  o.frequency.setValueAtTime(f, at); o.frequency.exponentialRampToValueAtTime(f / 2, at + .25);
+  g.gain.setValueAtTime(.0001, at); g.gain.exponentialRampToValueAtTime(vol * .4, at + .01); g.gain.exponentialRampToValueAtTime(.0001, at + .5);
+  o.connect(g).connect(master); o.start(at); o.stop(at + .55);
+  kick(at, vol);
+}
+function scheduleAudio(T) {
+  // dron grave que se va abriendo
+  const lp = actx.createBiquadFilter(); lp.type = "lowpass"; lp.Q.value = 6;
+  lp.frequency.setValueAtTime(120, T); lp.frequency.linearRampToValueAtTime(260, T + 11);
+  lp.frequency.linearRampToValueAtTime(520, T + 23); lp.frequency.linearRampToValueAtTime(380, T + 25);
+  lp.frequency.linearRampToValueAtTime(650, T + 31); lp.frequency.linearRampToValueAtTime(900, T + 37.3);
+  lp.frequency.setValueAtTime(220, T + 37.5); lp.frequency.linearRampToValueAtTime(600, T + 48); lp.frequency.linearRampToValueAtTime(150, T + DURATION);
+  const dg = actx.createGain();
+  dg.gain.setValueAtTime(0, T); dg.gain.linearRampToValueAtTime(.16, T + 4);
+  dg.gain.setValueAtTime(.16, T + 37.2); dg.gain.linearRampToValueAtTime(.01, T + 37.38);
+  dg.gain.linearRampToValueAtTime(.2, T + 37.6); dg.gain.setValueAtTime(.2, T + 49); dg.gain.linearRampToValueAtTime(0, T + DURATION);
+  lp.connect(dg).connect(master);
+  [[55, "sawtooth"], [55.7, "sawtooth"], [82.4, "sawtooth"], [27.5, "sine"]].forEach(([f, type]) => {
+    const o = track(actx.createOscillator()); o.type = type; o.frequency.value = f;
+    const g = actx.createGain(); g.gain.value = type === "sine" ? 1.4 : .5;
+    o.connect(g).connect(lp); o.start(T); o.stop(T + DURATION + .5);
+  });
+  // latido durante los sectores y "crecer"
+  for (let x = 11; x < 23; x += .6) kick(T + x, .5);
+  for (let x = 25; x < 37.2; x += .6) kick(T + x, x < 31 ? .55 : .7);
+  // golpe por cada inversión: ETFs, bonos, cripto, IA
+  [26.2, 27.2, 28.2, 29.2].forEach((s, i) => blip(T + s, i === 3 ? .5 : .35, i === 3 ? 1320 : 880));
+  // golpes
+  [[5, .5], [8, .7], [11, .9], [14, .8], [17, .8], [20, .8], [23, .5], [25, 1], [31, .6], [33.8, .9], [37.4, 1.3], [43.4, .6]].forEach(([s, v]) => impact(T + s, v));
+  // subida antes del 05
+  const n = track(actx.createBufferSource()), bp = actx.createBiquadFilter(), rg = actx.createGain();
+  n.buffer = noiseBuf; n.loop = true; bp.type = "bandpass"; bp.Q.value = 3;
+  bp.frequency.setValueAtTime(300, T + 34.4); bp.frequency.exponentialRampToValueAtTime(5000, T + 37.35);
+  rg.gain.setValueAtTime(.0001, T + 34.4); rg.gain.exponentialRampToValueAtTime(.35, T + 37.3); rg.gain.linearRampToValueAtTime(0, T + 37.4);
+  n.connect(bp).connect(rg).connect(master); n.start(T + 34.4); n.stop(T + 37.5);
+  // acorde final
+  [220, 329.6, 440, 659.3].forEach((f, i) => {
+    const o = track(actx.createOscillator()), g = actx.createGain(); o.type = "sine"; o.frequency.value = f;
+    g.gain.setValueAtTime(0, T + 43.4); g.gain.linearRampToValueAtTime(.05 - i * .008, T + 46); g.gain.linearRampToValueAtTime(0, T + DURATION);
+    o.connect(g).connect(master); o.start(T + 43.4); o.stop(T + DURATION + .2);
+  });
+}
+
+// ─── reproducción ───
+const progressEl = document.getElementById("progress");
+const startEl = document.getElementById("start"), hintEl = document.getElementById("hint");
+const HINT = hintEl.textContent;
+function showHint(text) { hintEl.textContent = text; setTimeout(() => { hintEl.textContent = HINT; }, 7000); }
+// al terminar, vuelve a la portada inicial: fondo limpio, logo y "Ver el video"
+function backToCover() {
+  setFormat(forcedV ?? portrait());
+  cover();
+  progressEl.style.width = "0";
+  startEl.classList.remove("hide");
+}
+let playing = false, recorder = null, chunks = [], loopId = 0;
+
+function now() { return actx ? actx.currentTime - t0 : 0; }
+function frame(id) {
+  if (!playing || id !== loopId) return;
+  const t = now();
+  if (t >= DURATION) { scene(DURATION - .001); finish(); return; }
+  scene(Math.max(0, t));
+  progressEl.style.width = (t / DURATION * 100) + "%";
+  requestAnimationFrame(() => frame(id));
+}
+async function play(format) {
+  if (!playing || format !== undefined) setFormat(format ?? (forcedV ?? portrait()), !!recorder);
+  await Promise.all(["300", "400", "600", "800"].map(w => document.fonts.load(`${w} 40px Montserrat`)));
+  if (!actx) setupAudio();
+  await actx.resume();
+  stopAudio();
+  t0 = actx.currentTime + .15;
+  scheduleAudio(t0);
+  startEl.classList.add("hide");
+  playing = true; const id = ++loopId; requestAnimationFrame(() => frame(id));
+}
+function finish() {
+  playing = false;
+  if (recorder && recorder.state === "recording") recorder.stop();   // onstop vuelve a la portada
+  else backToCover();
+}
+
+// ─── descargar (graba el lienzo + audio en tiempo real) ───
+function pickMime() {
+  const opts = ["video/mp4;codecs=avc1.42E01E,mp4a.40.2", "video/mp4", "video/webm;codecs=vp9,opus", "video/webm"];
+  return opts.find(m => window.MediaRecorder && MediaRecorder.isTypeSupported(m));
+}
+async function record(vertical) {
+  const mime = pickMime();
+  if (!mime) { showHint("Este navegador no permite descargar el video. Prueba con Chrome."); return; }
+  if (!actx) setupAudio();
+  setFormat(vertical, true);
+  const stream = canvas.captureStream(30);
+  recDest.stream.getAudioTracks().forEach(tr => stream.addTrack(tr));
+  chunks = [];
+  recorder = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: 12_000_000 });
+  recorder.ondataavailable = e => e.data.size && chunks.push(e.data);
+  recorder.onstop = () => {
+    const blob = new Blob(chunks, { type: mime.split(";")[0] });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "stcapitalgroup-video-" + TEMA + "-" + (V ? "vertical" : "horizontal") + "." + (mime.startsWith("video/mp4") ? "mp4" : "webm");
+    document.body.appendChild(a); a.click(); a.remove();
+    document.body.classList.remove("recording");
+    recorder = null;
+    backToCover();
+    showHint("Video descargado · está en tu carpeta de Descargas");
+  };
+  document.body.classList.add("recording");
+  recorder.start(500);
+  await play(vertical);
+}
+
+document.getElementById("playBtn").onclick = () => play();
+document.getElementById("restartBtn").onclick = () => { if (recorder) return; playing = false; play(); };
+document.getElementById("dlH").onclick = () => { if (recorder) return; playing = false; record(false); };
+document.getElementById("dlV").onclick = () => { if (recorder) return; playing = false; record(true); };
+// si se gira la pantalla antes de empezar, cambia el formato
+window.addEventListener("resize", () => { if (!playing && forcedV === null && portrait() !== V) { setFormat(portrait()); cover(); } });
+setFormat(forcedV ?? portrait());
+document.getElementById("muteBtn").onclick = e => {
+  muted = !muted; if (speakers) speakers.gain.value = muted ? 0 : 1;
+  e.target.textContent = "Sonido: " + (muted ? "no" : "sí");
+};
+document.getElementById("fsBtn").onclick = () => {
+  try {
+    if (document.fullscreenElement) return document.exitFullscreen();
+    const el = document.documentElement;
+    (el.requestFullscreen || el.webkitRequestFullscreen || (() => canvas.webkitEnterFullscreen?.())).call(el);
+  } catch {}
+};
+if (!(document.documentElement.requestFullscreen || document.documentElement.webkitRequestFullscreen)) document.getElementById("fsBtn").hidden = true;
+
+// los controles aparecen al mover el ratón
+let uiTimer;
+window.addEventListener("pointermove", () => { document.body.classList.add("ui"); clearTimeout(uiTimer); uiTimer = setTimeout(() => document.body.classList.remove("ui"), 2200); });
+
+// primer fotograma de fondo mientras espera
+// portada: fondo limpio, sin nada del video detrás del logo
+function cover() { ctx.fillStyle = TH.bg; ctx.fillRect(0, 0, W, H); }
+cover();
+</script>
+</body>
+</html>
